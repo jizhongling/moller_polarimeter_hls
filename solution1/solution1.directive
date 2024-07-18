@@ -1,0 +1,15 @@
+<AutoPilot:ProjectResources xmlns:AutoPilot="com.autoesl.autopilot.ui.directiveView">
+    <sourceFile name="">
+        <directive functionName="hls_moller_compton" label="" functionLabel="">
+            <pragma name="TOP">
+                <option name="name" value="hls_moller_compton"/>
+            </pragma>
+        </directive>
+        <directive functionName="hls_moller_compton" label="" functionLabel="">
+            <pragma name="TOP">
+                <option name="name" value="hls_moller_compton"/>
+            </pragma>
+        </directive>
+    </sourceFile>
+</AutoPilot:ProjectResources>
+

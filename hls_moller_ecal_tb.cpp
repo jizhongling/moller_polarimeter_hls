@@ -4,6 +4,11 @@
 #include "hls_moller_ecal.h"
 using namespace std;
 
+typedef struct
+{
+  ap_uint<13> n[nch];
+} e_t;
+
 void set_vxs_payload(vxs_payload_t &vxs_payload, fadc_t fadc, int slot, int ch)
 {
   /*

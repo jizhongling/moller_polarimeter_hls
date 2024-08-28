@@ -40,16 +40,14 @@ void hls_moller_ecal(
   ap_uint<nch/2> fadc_ecal_l[nt] = {};
   ap_uint<nch/2> fadc_ecal_r[nt] = {};
 
-  for(int ch=0; ch<nch; ch++)
+  for(int ch=0; ch<nch/2; ch++)
   {
-    fadc_t fadc = get_fadc(vxs_payload, slot, ch);
-    if(fadc.e > eth)
-    {
-      if(ch < nch/2)
-        fadc_ecal_l[fadc.t][ch] = 1;
-      else
-        fadc_ecal_r[fadc.t][ch-nch/2] = 1;
-    }
+    fadc_t fadc_l = get_fadc(vxs_payload, slot, ch);
+    fadc_t fadc_r = get_fadc(vxs_payload, slot, ch+nch/2);
+    if(fadc_l.e > eth)
+      fadc_ecal_l[fadc_l.t][ch] = 1;
+    if(fadc_r.e > eth)
+      fadc_ecal_r[fadc_r.t][ch] = 1;
   }
   for(int t=0; t<nt; t++)
     trig.n[0][t] = fadc_ecal_l[t].or_reduce() and fadc_ecal_r[t].or_reduce();

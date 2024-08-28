@@ -17,10 +17,6 @@ typedef struct
   ap_uint<13> e;
   ap_uint<3>  t;
 } fadc_t;
-typedef struct
-{
-  ap_uint<13> n[nch];
-} e_t;
 
 #define N_TRIGGER_BITS 1
 

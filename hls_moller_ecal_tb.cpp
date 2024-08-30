@@ -6,8 +6,9 @@ using namespace std;
 
 typedef struct
 {
-  ap_uint<13> n[nch];
-} e_t;
+  ap_uint<13> e[2][nch];
+  ap_uint<3> t[2][nch];
+} fadc_ch_t;
 
 void set_vxs_payload(vxs_payload_t &vxs_payload, fadc_t fadc, int slot, int ch)
 {
@@ -29,7 +30,7 @@ int main(int argc, char *argv[])
   hls::stream<vxs_payload_t> s_vxs_payload;
   hls::stream<trig_t> s_trig;
   hls::stream<trig_t> s_trig_tag;
-  hls::stream<e_t> s_e;
+  hls::stream<fadc_ch_t> s_fadc;
 
   cout << "Started C simulation" << endl;
 
@@ -38,45 +39,69 @@ int main(int argc, char *argv[])
   {
     vxs_payload_t vxs_payload = 0;
     trig_t trig_tag;
+    fadc_ch_t fadc_ch;
+    ap_uint<nt*2> ecal[nch] = {};
+    ap_uint<nt*2> trig_tmp = 0;
     for(int t=0; t<nt; t++)
       trig_tag.n[0][t] = 0;
-    e_t e;
-    int t = rand() % nt;
     for(int ch=0; ch<nch; ch++)
     {
-      e.n[ch] = rand() % emax;
+      fadc_ch.e[0][ch] = i==0 ? ap_uint<13>(rand() % emax) : fadc_ch.e[1][ch];
+      fadc_ch.e[1][ch] = rand() % emax;
+      fadc_ch.t[0][ch] = i==0 ? ap_uint<3>(rand() % nt) : fadc_ch.t[1][ch];
+      fadc_ch.t[1][ch] = rand() % nt;
+      if(fadc_ch.e[0][ch] > eth)
+        ecal[ch](fadc_ch.t[0][ch]+nt-1, fadc_ch.t[0][ch]) = -1;
+      if(fadc_ch.e[1][ch] > eth)
+        ecal[ch](nt*2-1, fadc_ch.t[1][ch]+nt) = -1;
       fadc_t fadc;
-      fadc.e = e.n[ch];
-      fadc.t = t;
+      fadc.e = fadc_ch.e[0][ch];
+      fadc.t = fadc_ch.t[0][ch];
       set_vxs_payload(vxs_payload, fadc, slot, ch);
     }
-    trig_tag.n[0][t] = (e.n[0]>eth or e.n[1]>eth or e.n[2]>eth or e.n[3]>eth) and (e.n[4]>eth or e.n[5]>eth or e.n[6]>eth or e.n[7]>eth);
+    for(int t=0; t<nt*2; t++)
+      trig_tmp[t] = (ecal[0][t] or ecal[1][t] or ecal[2][t] or ecal[3][t]) and (ecal[4][t] or ecal[5][t] or ecal[6][t] or ecal[7][t]);
+    for(int t=0; t<nt; t++)
+      trig_tag.n[0][t] = ap_uint<nt*2>(trig_tmp(t+nt-1, t)).or_reduce();
+    // Set bits after the leading edge to 0
+    for(int t=0; t<nt; t++)
+      if(trig_tag.n[0][t] == 1)
+        for(int u=1; t+u<nt; u++)
+          trig_tag.n[0][t+u] = 0;
     s_vxs_payload.write(vxs_payload);
     s_trig_tag.write(trig_tag);
-    s_e.write(e);
+    s_fadc.write(fadc_ch);
   }
 
+  vxs_payload_t vxs_payload_next;
+  if(!s_vxs_payload.empty())
+    vxs_payload_next = s_vxs_payload.read();
   while(!s_vxs_payload.empty())
-    hls_moller_ecal(s_vxs_payload, s_trig, eth);
+    hls_moller_ecal(s_vxs_payload, s_trig, vxs_payload_next, eth);
 
-  while(!s_trig.empty() and !s_trig_tag.empty() and !s_e.empty())
+  int event = 0;
+  while(!s_trig.empty() and !s_trig_tag.empty() and !s_fadc.empty())
   {
     trig_t trig = s_trig.read();
     trig_t trig_tag = s_trig_tag.read();
-    e_t e = s_e.read();
+    fadc_ch_t fadc_ch = s_fadc.read();
+    cout << "\nEvent " << event++ << endl;
+    for(int i=0; i<2; i++)
+    {
+      cout << "energy" << i << ":";
+      for(int ch=0; ch<nch; ch++)
+        cout << "\t" << fadc_ch.e[i][ch];
+      cout << "\nt_start" << i << ":";
+      for(int ch=0; ch<nch; ch++)
+        cout << "\t" << fadc_ch.t[i][ch];
+      cout << endl;
+    }
+    cout << "t\t\ttrig\ttrig_tag\n";
     for(int t=0; t<nt; t++)
     {
-      if(trig.n[0][t] == trig_tag.n[0][t])
-      {
-        cout << "Consistent trigger found" << endl;
-      }
-      else
-      {
+      cout << t << "\t\t" << trig.n[0][t] << "\t\t" << trig_tag.n[0][t] << endl;
+      if(trig.n[0][t] != trig_tag.n[0][t])
         cout << "Inconsistent trigger found" << endl;
-        cout << "e: " << e.n[0] << ", " << e.n[1] << ", " << e.n[2] << ", " << e.n[3] << ", "
-          << e.n[4] << ", " << e.n[5] << ", " << e.n[6] << ", " << e.n[7] << endl;
-        cout << "trig: " << trig.n[0][t] << ", trig_tag: " << trig_tag.n[0][t] << endl;
-      }
     }
   }
 

@@ -28,7 +28,7 @@ typedef struct
 //          trigger bit 1: trig_t.n[1][0] @ 0ns, trig_t.n[1][1] @ 4ns, ..., trig_t.n[1][7] @ 24ns
 typedef struct
 {
-  ap_uint<1> n[N_TRIGGER_BITS][8];
+  ap_uint<1> n[N_TRIGGER_BITS][nt];
 } trig_t;
 
 // Helper functions
@@ -47,6 +47,7 @@ fadc_t get_fadc(vxs_payload_t vxs_payload, int slot, int ch);
 void hls_moller_ecal(
     hls::stream<vxs_payload_t> &s_vxs_payload,
     hls::stream<trig_t> &s_trig,
+    vxs_payload_t &vxs_payload_next,
     ap_uint<13> fadc_threshold
     );
 

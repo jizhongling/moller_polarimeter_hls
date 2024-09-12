@@ -8,8 +8,10 @@
 const int slot = 3;
 const int nch = 8;
 const int nt = 8;
+const int dt = 3;
+const int nth = 3;
 const int emax = 100;
-const int eth = 80;
+const int eth = 50;
 
 typedef ap_uint<4096> vxs_payload_t;
 typedef struct
@@ -47,7 +49,7 @@ fadc_t get_fadc(vxs_payload_t vxs_payload, int slot, int ch);
 void hls_moller_ecal(
     hls::stream<vxs_payload_t> &s_vxs_payload,
     hls::stream<trig_t> &s_trig,
-    vxs_payload_t &vxs_payload_next,
+    vxs_payload_t &vxs_payload_pre,
     ap_uint<13> fadc_threshold
     );
 

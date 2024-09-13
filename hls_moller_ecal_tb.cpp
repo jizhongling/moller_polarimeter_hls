@@ -36,15 +36,15 @@ int main(int argc, char *argv[])
 
   while(fin >> bin_str)
   {
-	ap_uint<nt> bin_num = stoi(bin_str, nullptr, 2);
-	int index = ien % (nch+1);
-	ien++;
-	if(index < nch)
-	  ecal[index] = bin_num;
-	else
-	  tag = bin_num;
-	if(index != nch)
-	  continue;
+    ap_uint<nt> bin_num = stoi(bin_str, nullptr, 2);
+    int index = ien % (nch+1);
+    ien++;
+    if(index < nch)
+      ecal[index] = bin_num(0, nt-1);  // bit-reversed for (Lo,Hi) instead of (Hi,Lo)
+    else
+      tag = bin_num(0, nt-1);  // bit-reversed for (Lo,Hi) instead of (Hi,Lo)
+    if(index != nch)
+      continue;
 
     vxs_payload_t vxs_payload = 0;
     trig_t trig_tag;
@@ -53,23 +53,23 @@ int main(int argc, char *argv[])
       fadc_t fadc;
       fadc.e = 80;
       for(int t=0; t<nt; t++)
-    	if(ecal[ch][nt-1-t])
-    	{
-    	  fadc.t = t;
-    	  set_vxs_payload(vxs_payload, fadc, slot, ch);
-    	  break;
-    	}
+        if(ecal[ch][t])
+        {
+          fadc.t = t;
+          set_vxs_payload(vxs_payload, fadc, slot, ch);
+          break;
+        }
     }
     for(int t=0; t<nt; t++)
-      trig_tag.n[0][t] = tag[nt-1-t];
+      trig_tag.n[0][t] = tag[t];
     s_vxs_payload.write(vxs_payload);
     s_trig_tag.write(trig_tag);
   }
   fin.close();
 
-  vxs_payload_t vxs_payload_pre = 0;
+  vxs_payload_t vxs_payload_last = 0;
   while(!s_vxs_payload.empty())
-    hls_moller_ecal(s_vxs_payload, s_trig, vxs_payload_pre, eth);
+    hls_moller_ecal(s_vxs_payload, s_trig, vxs_payload_last, eth);
 
   int event = 0;
   while(!s_trig.empty() and !s_trig_tag.empty())
@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
     trig_t trig_tag = s_trig_tag.read();
     for(int t=0; t<nt; t++)
       if(trig.n[0][t] != trig_tag.n[0][t])
-    	cout << "Event " << event << ": Inconsistent trigger found at time " << t << endl;
+        cout << "Event " << event << ": Inconsistent trigger found at time " << t << endl;
     event++;
   }
 

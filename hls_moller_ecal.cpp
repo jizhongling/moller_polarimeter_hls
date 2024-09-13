@@ -25,7 +25,7 @@ s_trig:         computed trigger bit output/result
 void hls_moller_ecal(
     hls::stream<vxs_payload_t> &s_vxs_payload,
     hls::stream<trig_t> &s_trig,
-    vxs_payload_t &vxs_payload_pre,
+    vxs_payload_t &vxs_payload_last,
     ap_uint<13> fadc_threshold
     )
 {
@@ -39,15 +39,15 @@ void hls_moller_ecal(
     trig.n[0][t] = 0;
 
   ap_uint<nt*2> ecal[nch] = {};
-  ap_uint<4> hits_or[nt*2] = {};
+  ap_uint<nt*2> trig_tmp = 0;
 
   // Extend the hit time from the leading edge t to t+dt
   for(int ch=0; ch<nch; ch++)
   {
-    fadc_t fadc_pre = get_fadc(vxs_payload_pre, slot, ch);
-    if(fadc_pre.e > eth && !ecal[ch][fadc_pre.t])
+    fadc_t fadc_last = get_fadc(vxs_payload_last, slot, ch);
+    if(fadc_last.e > eth && !ecal[ch][fadc_last.t])
       for(int u=0; u<dt; u++)
-        ecal[ch][fadc_pre.t+u] = 1;
+        ecal[ch][fadc_last.t+u] = 1;
 
     fadc_t fadc = get_fadc(vxs_payload, slot, ch);
     if(fadc.e > eth && !ecal[ch][fadc.t+nt])
@@ -55,17 +55,16 @@ void hls_moller_ecal(
         ecal[ch][fadc.t+u+nt] = 1;
   }
 
-  // Store the trigger multiplicity for each time
+  // Store the trigger for each time
   for(int t=0; t<nt*2; t++)
-	for(int ch=0; ch<nch; ch++)
-      hits_or[t] += ecal[ch][t];
+    trig_tmp[t] = (ecal[0][t] or ecal[1][t] or ecal[2][t] or ecal[3][t]) and (ecal[4][t] or ecal[5][t] or ecal[6][t] or ecal[7][t]);
 
   // Set the leading edge to 1
   for(int t=nt; t<nt*2; t++)
-  	if(hits_or[t-1] < nth && hits_or[t] >= nth)
-        trig.n[0][t-nt] = 1;
+    if(!trig_tmp[t-1] && trig_tmp[t])
+      trig.n[0][t-nt] = 1;
 
   // Write 32ns worth of trigger decisions
   s_trig.write(trig);
-  vxs_payload_pre = vxs_payload;
+  vxs_payload_last = vxs_payload;
 }

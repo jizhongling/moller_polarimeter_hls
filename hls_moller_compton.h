@@ -2,6 +2,7 @@
 #define hls_moller_helicity_h
 
 #include <hls_stream.h>
+#define AP_INT_MAX_W 4096 // Must be defined before next line
 #include <ap_int.h>
 
 typedef ap_uint<4096> vxs_payload_t;

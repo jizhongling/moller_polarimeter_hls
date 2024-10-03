@@ -9,8 +9,6 @@ const int slot = 3;
 const int nch = 8;
 const int nt = 8;
 const int dt = 3;
-const int emax = 100;
-const int eth = 0;
 
 typedef ap_uint<4096> vxs_payload_t;
 typedef struct
@@ -32,24 +30,40 @@ typedef struct
   ap_uint<1> n[N_TRIGGER_BITS][nt];
 } trig_t;
 
+typedef struct
+{
+  ap_uint<10> t_start;
+  ap_uint<10> t_stop;
+} trig_accept_t;
+
+/* readout data */
+typedef struct
+{
+  ap_uint<32> data;
+  ap_uint<1>  end;
+} eventdata_t;
+
 // Helper functions
 fadc_t get_fadc(vxs_payload_t vxs_payload, int slot, int ch);
 
-// hls_moller_ecal:
-//   - s_vxs_payload: contains 16 slots of VXS payload information updated every 32ns
-//     for compton we assume the following crate configuration:
-//       FADC   in slot 3  photon detector
-//
-//   - s_trig: contains trigger bit decisions, currently 1 trigger:
-//       s_trig.n[0]
-//
-//   - Currently this code expects:
-//       1) FADC hits
+// Top-level synthesis target
 void hls_moller_ecal(
-    hls::stream<vxs_payload_t> &s_vxs_payload,
-    hls::stream<trig_t> &s_trig,
-    vxs_payload_t &vxs_payload_last,
-    ap_uint<13> fadc_threshold
+    // FADC Streaming (input)
+    hls::stream<vxs_payload_t>  &s_vxs_payload,
+
+    // ECal trigger parameters & trigger bit stream (output)
+    hls::stream<trig_t>         &s_trig,
+    vxs_payload_t 				&vxs_payload_last,
+    ap_uint<13>                 &fadc_threshold,
+
+    // Helicity event builder
+    hls::stream<eventdata_t>    &s_event_helicity,
+    hls::stream<trig_accept_t>  &s_trig_accept,
+    ap_uint<32>                 &helicity_cnt,
+    ap_uint<32>                 &mps_cnt,
+
+    // Helicity scalers event builder
+    hls::stream<eventdata_t>    &s_event_scalers
     );
 
 #endif

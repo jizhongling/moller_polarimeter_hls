@@ -43,11 +43,11 @@ void hls_helicity(
   vxs_payload_t vxs_payload = s_vxs_payload.read();
 
   // 32ns frame of discriminated MPS
-  fadc_t fadc_mps = get_fadc(vxs_payload, 3, 1);
+  fadc_t fadc_mps = get_fadc(vxs_payload, 3, 8);
   mps      = fadc_mps.e > 0 ? true : false;
 
   // 32ns frame of discriminated helicity
-  fadc_t fadc_helicity = get_fadc(vxs_payload, 3, 2);
+  fadc_t fadc_helicity = get_fadc(vxs_payload, 3, 9);
   helicity = fadc_helicity.e > 0 ? true : false;
 
   if(helicity)
